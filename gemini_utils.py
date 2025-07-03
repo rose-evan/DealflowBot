@@ -15,7 +15,7 @@ Return *only* valid JSON with exactly these keys and empty strings when a field 
   Founder Name
   Email
   Website
-  Personal Linkedin
+  Personal Linkedin -> scrape from internet if not provided
   Blurb about Company
   Industry
   Where Are You Based
@@ -26,7 +26,7 @@ Return *only* valid JSON with exactly these keys and empty strings when a field 
   Deck Links -> leave blank
   Status -> leave blank
   Call Notes -> leave blank
-  Last Modified -> generate a date and time in the format YYYY-MM-DD HH:MM:SS
+  Last Modified -> current date and time (in PST) in the format YYYY-MM-DD HH:MM:SS
 
 Text:
 """{text}"""'''

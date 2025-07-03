@@ -89,5 +89,5 @@ def extract_email_content(service, msg_id: str) -> Tuple[str, str, str]:
         text = "\n".join(page.extract_text() or "" for page in reader.pages)
         pdf_texts.append(text)
 
-    combined_text = "\n\n".join(body_texts + pdf_texts)
+    combined_text = f"Subject: {subject}\n\n" + "\n\n".join(body_texts + pdf_texts)
     return sender, subject, combined_text 

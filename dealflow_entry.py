@@ -1,10 +1,3 @@
-#!/usr/bin/env python3
-"""dealflow_entry.py
-Entry point for the Dealflow automation pipeline.
-
-Orchestrates Gmail → Gemini → Airtable using helper modules.
-"""
-
 from dotenv import load_dotenv
 
 from gmail_utils import authenticate_gmail, get_unread_messages, extract_email_content
@@ -13,7 +6,7 @@ from airtable_utils import insert_to_airtable
 
 
 def main():
-    # Load environment variables from .env (if present)
+    # Load environment variables from .env
     load_dotenv()
 
     service = authenticate_gmail()
