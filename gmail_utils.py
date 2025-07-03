@@ -1,7 +1,3 @@
-"""gmail_utils.py
-Utility functions for interacting with Gmail and extracting email + PDF content.
-"""
-
 import os
 import base64
 from io import BytesIO
