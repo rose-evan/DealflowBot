@@ -1,13 +1,8 @@
-"""airtable_utils.py
-Utility for inserting records into Airtable via REST API.
-"""
-
 import os
 import requests
 
 
 def insert_to_airtable(record: dict):
-    """Insert a single record (dict) into Airtable."""
     api_key = os.getenv("AIRTABLE_API_KEY")
     base_id = os.getenv("AIRTABLE_BASE_ID")
     table_name = os.getenv("AIRTABLE_TABLE_NAME")
@@ -20,7 +15,10 @@ def insert_to_airtable(record: dict):
         "Authorization": f"Bearer {api_key}",
         "Content-Type": "application/json",
     }
-    payload = {"fields": record}
+
+    # Drop empty strings / None to avoid select-option errors
+    clean_record = {k: v for k, v in record.items() if v}
+    payload = {"fields": clean_record}
 
     resp = requests.post(url, headers=headers, json=payload, timeout=30)
     if resp.status_code >= 400:

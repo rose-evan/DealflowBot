@@ -13,8 +13,8 @@ from google_auth_oauthlib.flow import InstalledAppFlow
 from googleapiclient.discovery import build
 from PyPDF2 import PdfReader
 
-# Gmail API scope (read-only)
-SCOPES = ["https://www.googleapis.com/auth/gmail.readonly"]
+# Gmail API scope (read & modify so we can mark messages as read)
+SCOPES = ["https://www.googleapis.com/auth/gmail.modify"]
 
 
 def authenticate_gmail():
