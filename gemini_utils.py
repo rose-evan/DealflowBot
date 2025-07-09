@@ -3,35 +3,62 @@ import json
 import google.generativeai as genai
 
 
-def extract_fields_with_gemini(text: str) -> dict:
+def extract_fields_with_gemini(text: str, images: list = None) -> dict:
+    """
+    Extract fields from text and optional images using Gemini.
+    images: list of PIL.Image.Image objects (from pdf2image)
+    """
     genai.configure(api_key=os.getenv("GEMINI_API_KEY"))
     model = genai.GenerativeModel("gemini-2.5-flash")
 
-    prompt = f'''
-You are a data extraction assistant for venture capital dealflow.
-Given the following unstructured text (which may include an email and/or a pitch deck), extract the following fields.
-Return *only* valid JSON with exactly these keys and empty strings when a field is missing:
-  Company
-  Founder Name
-  Email
-  Website
-  Personal Linkedin -> scrape from internet if not provided
-  Blurb about Company
-  Industry
-  Where Are You Based
-  Raise Amount
-  Round -> options: Angle, PreSeed, Seed, Series A, Series B+
-  Relevant Company Metrics/Traction
-  Deck -> leave blank
-  Deck Links -> leave blank
-  Status -> leave blank
-  Call Notes -> leave blank
-  Last Modified -> current date and time (in PST) in the format YYYY-MM-DD HH:MM:SS
+    prompt = (
+        "You are a data extraction assistant for venture capital dealflow.\n"
+        "Given the following unstructured text (which may include an email and/or a pitch deck), extract the following fields.\n"
+        "Return *only* valid JSON with exactly these keys and empty strings when a field is missing:\n"
+        "  Company\n"
+        "  Founder Name\n"
+        "  Email\n"
+        "  Website\n"
+        "  Personal Linkedin -> occasionaly founders attach their linkedin profile in the email\n"
+        "  Blurb about Company\n"
+        "  Industry\n"
+        "  Where Are You Based\n"
+        "  Raise Amount\n"
+        "  Round -> options: Angle, PreSeed, Seed, Series A, Series B+\n"
+        "  Relevant Company Metrics/Traction\n"
+        "  Deck -> leave blank (PDF files will be added separately)\n"
+        "  Deck Links -> leave blank\n"
+        "  Status -> leave blank\n"
+        "  Call Notes -> leave blank\n"
+        "  Last Modified -> leave blank (will be set automatically)\n\n"
+        "Text and images follow."
+    )
 
-Text:
-"""{text}"""'''
+    # Compose multimodal input
+    contents = [
+        {"role": "user", "parts": [
+            {"text": prompt},
+            {"text": text}
+        ]}
+    ]
+    # If images are provided, add them as parts
+    if images:
+        for img in images:
+            # Convert PIL Image to bytes (JPEG)
+            from io import BytesIO
+            buf = BytesIO()
+            img.save(buf, format="JPEG")
+            img_bytes = buf.getvalue()
+            contents[0]["parts"].append({"inline_data": {"mime_type": "image/jpeg", "data": img_bytes}})
 
-    response = model.generate_content(prompt)
+    # The google.generativeai API expects a list of parts (text, images, etc.)
+    # See: https://ai.google.dev/gemini-api/docs/send-multimodal-content
+    try:
+        response = model.generate_content(contents[0]["parts"])
+    except Exception as e:
+        print(f"[ERROR] Gemini API call failed: {e}")
+        return {}
+
     content = response.text.strip()
 
     # Strip markdown fences if present (```json ... ```)

@@ -1,4 +1,6 @@
 from dotenv import load_dotenv
+from datetime import datetime
+import pytz
 
 from gmail_utils import authenticate_gmail, get_unread_messages, extract_email_content
 from gemini_utils import extract_fields_with_gemini
@@ -19,11 +21,17 @@ def main():
     for msg_meta in messages:
         msg_id = msg_meta["id"]
         try:
-            sender, subject, text = extract_email_content(service, msg_id)
+            sender, subject, text, pdf_images, pdf_file_paths = extract_email_content(service, msg_id)
             print(f"Processing: {subject} ({sender})")
 
-            structured = extract_fields_with_gemini(text)
+            structured = extract_fields_with_gemini(text, pdf_images)
             if structured:
+                # Add current date/time in PST
+                pst = pytz.timezone('US/Pacific')
+                current_time = datetime.now(pst).strftime("%Y-%m-%d %H:%M:%S")
+                structured["Last Modified"] = current_time
+                
+                # Insert record without PDF attachments
                 insert_to_airtable(structured)
             else:
                 print("[WARN] Skipping insert — no structured data returned.")

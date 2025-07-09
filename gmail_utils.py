@@ -2,12 +2,15 @@ import os
 import base64
 from io import BytesIO
 from typing import List, Tuple
+import tempfile
+from datetime import datetime
 
 from google.oauth2.credentials import Credentials
 from google.auth.transport.requests import Request
 from google_auth_oauthlib.flow import InstalledAppFlow
 from googleapiclient.discovery import build
 from PyPDF2 import PdfReader
+from pdf2image import convert_from_bytes
 
 # Gmail API scope (read & modify so we can mark messages as read)
 SCOPES = ["https://www.googleapis.com/auth/gmail.modify"]
@@ -35,11 +38,13 @@ def authenticate_gmail():
 
 
 def get_unread_messages(service, max_results: int = 10):
-    """Return a list of unread Gmail message metadata (can be empty)."""
+    """Return a list of unread Gmail message metadata (can be empty), only those with the 'automated' label."""
+    # Use Gmail search query to require 'automated' label
+    query = 'label:automated is:unread'
     results = (
         service.users()
         .messages()
-        .list(userId="me", labelIds=["UNREAD"], maxResults=max_results)
+        .list(userId="me", q=query, maxResults=max_results)
         .execute()
     )
     return results.get("messages", [])
@@ -70,8 +75,8 @@ def _walk_parts(parts, service, msg_id, body_texts: List[str], pdf_blobs: List[b
             _walk_parts(part["parts"], service, msg_id, body_texts, pdf_blobs)
 
 
-def extract_email_content(service, msg_id: str) -> Tuple[str, str, str]:
-    """Extract sender, subject, and combined text (body + PDFs) from a message."""
+def extract_email_content(service, msg_id: str) -> Tuple[str, str, str, list, list]:
+    """Extract sender, subject, combined text (body + PDFs), PDF images, and saved PDF file paths from a message."""
     msg = service.users().messages().get(userId="me", id=msg_id, format="full").execute()
 
     headers = msg["payload"].get("headers", [])
@@ -82,12 +87,30 @@ def extract_email_content(service, msg_id: str) -> Tuple[str, str, str]:
     pdf_blobs: List[bytes] = []
     _walk_parts([msg["payload"]], service, msg_id, body_texts, pdf_blobs)
 
-    # Extract text from PDFs
+    # Create decks directory if it doesn't exist
+    decks_dir = "decks"
+    if not os.path.exists(decks_dir):
+        os.makedirs(decks_dir)
+
+    # Save PDFs and track file paths
+    pdf_file_paths = []
     pdf_texts: List[str] = []
-    for blob in pdf_blobs:
+    pdf_images: list = []
+    
+    for i, blob in enumerate(pdf_blobs):
+        # Save PDF to file
+        timestamp = datetime.now().strftime("%Y%m%d_%H%M%S")
+        filename = f"deck_{timestamp}_{i+1}.pdf"
+        file_path = os.path.join(decks_dir, filename)
+        
+        with open(file_path, "wb") as f:
+            f.write(blob)
+        pdf_file_paths.append(file_path)
+        print(f"[INFO] Saved PDF deck: {file_path}")
+        
+        # Extract text from PDF
         reader = PdfReader(BytesIO(blob))
         text = "\n".join(page.extract_text() or "" for page in reader.pages)
         pdf_texts.append(text)
-
     combined_text = f"Subject: {subject}\n\n" + "\n\n".join(body_texts + pdf_texts)
-    return sender, subject, combined_text 
+    return sender, subject, combined_text, pdf_images, pdf_file_paths 

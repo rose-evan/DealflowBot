@@ -1,6 +1,6 @@
 import os
 import requests
-
+import mimetypes
 
 def insert_to_airtable(record: dict):
     api_key = os.getenv("AIRTABLE_API_KEY")
@@ -23,4 +23,4 @@ def insert_to_airtable(record: dict):
     resp = requests.post(url, headers=headers, json=payload, timeout=30)
     if resp.status_code >= 400:
         raise RuntimeError(f"Airtable error {resp.status_code}: {resp.text}")
-    print("[OK] Added row to Airtable.") 
+    print("[OK] Added row to Airtable.")
